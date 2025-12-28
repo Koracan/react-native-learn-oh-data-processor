@@ -1,0 +1,31 @@
+{
+  "name": "react-native-learn-oh-data-processor",
+  "version": "1.0.0",
+  "description": "Data processing TurboModule for LearnOH",
+  "main": "index.ts",
+  "codegenConfig": {
+    "name": "NativeLearnOHDataProcessor",
+    "type": "modules",
+    "jsSrcsDir": "src/specs/v1"
+  },
+  "harmony": {
+    "alias": "learn-oh-data-processor",
+    "codegenConfig": [
+      {
+        "version": 1,
+        "specPaths": [
+          "src/specs/v1"
+        ]
+      }
+    ]
+  },
+  "files": [
+    "index.ts",
+    "src/*",
+    "harmony/*"
+  ],
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  }
+}

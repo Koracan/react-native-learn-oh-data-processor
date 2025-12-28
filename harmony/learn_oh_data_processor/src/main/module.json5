@@ -1,0 +1,11 @@
+{
+  "module": {
+    "name": "learn_oh_data_processor",
+    "type": "har",
+    "deviceTypes": [
+      "default",
+      "tablet",
+      "2in1"
+    ]
+  }
+}
