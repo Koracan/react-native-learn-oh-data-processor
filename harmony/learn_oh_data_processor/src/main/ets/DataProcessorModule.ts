@@ -165,6 +165,7 @@ export class DataProcessorModule extends AnyThreadTurboModule {
                   expireTime: n.jzsj ?? undefined,
                   markedImportant: Number(n.sfqd) === 1,
                   hasRead: n.sfyd === '1' || n.sfyd === 1 || n.sfyd === '是' || n.sfyd === '已读',
+                  url: `https://learn.tsinghua.edu.cn/f/wlxt/kcgg/wlkc_ggb/student/beforeViewXs?wlkcid=${courseId}&id=${n.ggid}`,
                   courseId: courseId
                 });
               });
@@ -208,7 +209,8 @@ export class DataProcessorModule extends AnyThreadTurboModule {
                 uploadTime: f.scsj,
                 fileType: f.wjlx,
                 courseId: courseId,
-                isNew: f.isNew === true || f.isNew === 'true' || f.isNew === 1
+                isNew: f.isNew === true || f.isNew === 'true' || f.isNew === 1,
+                downloadUrl: `https://learn.tsinghua.edu.cn/b/wlxt/kj/wlkc_kjxxb/student/downloadFile?sfgk=0&wjid=${f.wjid}`
               });
             });
           }
