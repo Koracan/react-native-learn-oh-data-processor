@@ -1,6 +1,6 @@
 {
   "name": "react-native-learn-oh-data-processor",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Data processing TurboModule for LearnOH",
   "main": "index.ts",
   "codegenConfig": {

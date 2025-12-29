@@ -22,6 +22,6 @@ export interface Spec extends TurboModule {
   ): Promise<string>;
 }
 
-export default TurboModuleRegistry.get<Spec>(
+export default TurboModuleRegistry.getEnforcing<Spec>(
   'LearnOHDataProcessor',
-) as Spec | null;
+);
