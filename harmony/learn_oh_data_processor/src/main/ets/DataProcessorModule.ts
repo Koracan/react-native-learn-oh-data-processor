@@ -43,24 +43,6 @@ function decodeBase64(str: string): string {
 }
 
 export class DataProcessorModule extends AnyThreadTurboModule {
-  private extractCSRFToken(headers: Object): string | undefined {
-    const setCookie = headers['set-cookie'] || headers['Set-Cookie'];
-    if (!setCookie) {
-      console.info(`[DataProcessor] No set-cookie header found in response`);
-      return undefined;
-    }
-    
-    const cookies = Array.isArray(setCookie) ? setCookie : [setCookie];
-    for (const cookie of cookies) {
-      const match = cookie.match(/_csrf=([^;]+)/);
-      if (match) {
-        console.info(`[DataProcessor] Extracted NEW CSRF Token: ${match[1]}`);
-        return match[1];
-      }
-    }
-    return undefined;
-  }
-
   async processNotices(rawJson: string, courseNamesJson: string): Promise<string> {
     const rawData = JSON.parse(rawJson);
     const courseNames = JSON.parse(courseNamesJson);
@@ -122,7 +104,6 @@ export class DataProcessorModule extends AnyThreadTurboModule {
 
     const assignmentMap = new Map<string, any>();
     const listPromises: Promise<void>[] = [];
-    let latestToken = csrfToken;
 
     for (const courseId of courseIds) {
       for (const source of sources) {
@@ -137,9 +118,6 @@ export class DataProcessorModule extends AnyThreadTurboModule {
           extraData: `aoData=${encodeURIComponent(JSON.stringify([{ name: 'wlkcid', value: courseId }]))}`
         }).then(async res => {
           if (res.responseCode === 200) {
-            const newToken = this.extractCSRFToken(res.header);
-            if (newToken) latestToken = newToken;
-
             const resStr = typeof res.result === 'string' ? res.result : JSON.stringify(res.result);
             const json = JSON.parse(resStr);
             if (json.result === 'success') {
@@ -160,7 +138,7 @@ export class DataProcessorModule extends AnyThreadTurboModule {
 
                 // 1. Fetch description via JSON API (POST)
                 try {
-                  const descRes = await http.createHttp().request(`https://learn.tsinghua.edu.cn/b/wlxt/kczy/zy/student/detail?_csrf=${latestToken}`, {
+                  const descRes = await http.createHttp().request(`https://learn.tsinghua.edu.cn/b/wlxt/kczy/zy/student/detail?_csrf=${csrfToken}`, {
                     method: http.RequestMethod.POST,
                     header: {
                       'Content-Type': 'application/x-www-form-urlencoded',
@@ -309,10 +287,7 @@ export class DataProcessorModule extends AnyThreadTurboModule {
     await Promise.all(listPromises);
     const result = Array.from(assignmentMap.values());
     console.info(`[DataProcessor] fetchAssignments finished. Total: ${result.length}`);
-    return JSON.stringify({
-      data: result,
-      csrfToken: latestToken
-    });
+    return JSON.stringify(result);
   }
 
   async fetchNotices(courseIds: string[], cookie: string, csrfToken: string): Promise<string> {
@@ -324,7 +299,6 @@ export class DataProcessorModule extends AnyThreadTurboModule {
 
     const allResults: any[] = [];
     const listPromises: Promise<void>[] = [];
-    let latestToken = csrfToken;
 
     for (const courseId of courseIds) {
       for (const url of urls) {
@@ -339,9 +313,6 @@ export class DataProcessorModule extends AnyThreadTurboModule {
           extraData: `aoData=${encodeURIComponent(JSON.stringify([{ name: 'wlkcid', value: courseId }]))}`
         }).then(async res => {
           if (res.responseCode === 200) {
-            const newToken = this.extractCSRFToken(res.header);
-            if (newToken) latestToken = newToken;
-
             const resStr = typeof res.result === 'string' ? res.result : JSON.stringify(res.result);
             const json = JSON.parse(resStr);
             if (json.result === 'success') {
@@ -429,16 +400,12 @@ export class DataProcessorModule extends AnyThreadTurboModule {
 
     await Promise.all(listPromises);
     console.info(`[DataProcessor] fetchNotices finished. Total: ${allResults.length}`);
-    return JSON.stringify({
-      data: allResults,
-      csrfToken: latestToken
-    });
+    return JSON.stringify(allResults);
   }
 
   async fetchFiles(courseIds: string[], cookie: string, csrfToken: string): Promise<string> {
     const allResults: any[] = [];
     const promises: Promise<void>[] = [];
-    let latestToken = csrfToken;
 
     for (const courseId of courseIds) {
       const url = `https://learn.tsinghua.edu.cn/b/wlxt/kj/wlkc_kjxxb/student/kjxxbByWlkcidAndSizeForStudent?wlkcid=${courseId}&size=200&_csrf=${csrfToken}`;
@@ -450,9 +417,6 @@ export class DataProcessorModule extends AnyThreadTurboModule {
         }
       }).then(res => {
         if (res.responseCode === 200) {
-          const newToken = this.extractCSRFToken(res.header);
-          if (newToken) latestToken = newToken;
-
           const json = JSON.parse(res.result as string);
           if (json.result === 'success') {
             const data = Array.isArray(json.object) ? json.object : [];
@@ -479,9 +443,6 @@ export class DataProcessorModule extends AnyThreadTurboModule {
     }
 
     await Promise.all(promises);
-    return JSON.stringify({
-      data: allResults,
-      csrfToken: latestToken
-    });
+    return JSON.stringify(allResults);
   }
 }
