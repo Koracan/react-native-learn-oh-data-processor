@@ -445,4 +445,12 @@ export class DataProcessorModule extends AnyThreadTurboModule {
     await Promise.all(promises);
     return JSON.stringify(allResults);
   }
+
+  async moveToBackground(): Promise<void> {
+    try {
+      await this.ctx.uiAbilityContext.moveAbilityToBackground();
+    } catch (e) {
+      console.error(`[DataProcessor] moveAbilityToBackground failed:`, e);
+    }
+  }
 }
