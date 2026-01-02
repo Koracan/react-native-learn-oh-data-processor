@@ -1,6 +1,7 @@
 import { AnyThreadTurboModule } from '@rnoh/react-native-openharmony/ts';
 import http from '@ohos.net.http';
 import util from '@ohos.util';
+import fs from '@ohos.file.fs';
 
 function decodeHTML(str: string): string {
   if (!str) return '';
@@ -452,5 +453,96 @@ export class DataProcessorModule extends AnyThreadTurboModule {
     } catch (e) {
       console.error(`[DataProcessor] moveAbilityToBackground failed:`, e);
     }
+  }
+
+  async post(url: string, cookie: string, csrfToken: string, paramsJson: string, filePath?: string, fileName?: string, fileType?: string, requestId?: string): Promise<string> {
+    console.info(`[DataProcessor] post started for ${url}, requestId: ${requestId}`);
+    const params = JSON.parse(paramsJson);
+    const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
+    
+    let bodyParts: ArrayBuffer[] = [];
+    const textEncoder = new util.TextEncoder();
+
+    // Add text parameters
+    for (const key in params) {
+      let part = `--${boundary}\r\n`;
+      part += `Content-Disposition: form-data; name="${key}"\r\n\r\n`;
+      part += `${params[key]}\r\n`;
+      bodyParts.push(textEncoder.encodeInto(part).buffer as ArrayBuffer);
+    }
+
+    // Add file if provided
+    if (filePath) {
+      try {
+        let realPath = filePath;
+        if (realPath.startsWith('file://')) {
+          realPath = realPath.substring(7);
+        }
+        
+        if (fs.accessSync(realPath)) {
+          let file = fs.openSync(realPath, fs.OpenMode.READ_ONLY);
+          let stat = fs.statSync(file.fd);
+          let buf = new ArrayBuffer(stat.size);
+          fs.readSync(file.fd, buf);
+          fs.closeSync(file);
+
+          let partHeader = `--${boundary}\r\n`;
+          partHeader += `Content-Disposition: form-data; name="fileupload"; filename="${fileName || 'file'}"\r\n`;
+          partHeader += `Content-Type: ${fileType || 'application/octet-stream'}\r\n\r\n`;
+          
+          bodyParts.push(textEncoder.encodeInto(partHeader).buffer as ArrayBuffer);
+          bodyParts.push(buf);
+          bodyParts.push(textEncoder.encodeInto('\r\n').buffer as ArrayBuffer);
+        } else {
+          console.error(`[DataProcessor] File not accessible: ${realPath}`);
+        }
+      } catch (e) {
+        console.error(`[DataProcessor] Failed to read file for upload: ${e.message}`);
+      }
+    }
+
+    bodyParts.push(textEncoder.encodeInto(`--${boundary}--\r\n`).buffer as ArrayBuffer);
+
+    // Combine all parts into one ArrayBuffer
+    let totalLength = bodyParts.reduce((acc, val) => acc + val.byteLength, 0);
+    let combinedBody = new Uint8Array(totalLength);
+    let offset = 0;
+    for (let part of bodyParts) {
+      combinedBody.set(new Uint8Array(part), offset);
+      offset += part.byteLength;
+    }
+
+    return new Promise((resolve, reject) => {
+      const httpRequest = http.createHttp();
+      
+      if (requestId) {
+        httpRequest.on('dataSendProgress', (data) => {
+          this.ctx.rnInstance.emitDeviceEvent('LearnOHUploadProgress', {
+            requestId: requestId,
+            loaded: data.sendSize,
+            total: data.totalSize
+          });
+        });
+      }
+
+      httpRequest.request(url, {
+        method: http.RequestMethod.POST,
+        header: {
+          'Cookie': cookie,
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        },
+        extraData: combinedBody.buffer,
+        expectDataType: http.HttpDataType.STRING,
+      }).then(res => {
+        console.info(`[DataProcessor] post finished with status ${res.responseCode}`);
+        httpRequest.off('dataSendProgress');
+        resolve(res.result as string);
+      }).catch(err => {
+        console.error(`[DataProcessor] post failed:`, err);
+        httpRequest.off('dataSendProgress');
+        reject(err);
+      });
+    });
   }
 }

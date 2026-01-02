@@ -20,6 +20,17 @@ export interface Spec extends TurboModule {
     cookie: string,
     csrfToken: string,
   ): Promise<string>;
+  post(
+    url: string,
+    cookie: string,
+    csrfToken: string,
+    params: string,
+    filePath?: string,
+    fileName?: string,
+    fileType?: string,
+    requestId?: string,
+  ): Promise<string>;
+  moveToBackground(): void;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>(
